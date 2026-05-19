@@ -104,7 +104,7 @@ public:
 	void SetAnimationSide(Piece* sideParent)
 	{
 		if (m_sideParent && !sideParent) {
-			UpdateSlaveTransform(m_sideParent->m_sideFlags, 1.f, m_sideParent->GetPosition());
+			SideRotateAnimation(m_sideParent->m_sideFlags, 1.f, m_sideParent->GetPosition());
 			m_startValue.reset();
 		}
 		else if (sideParent) {
@@ -115,21 +115,17 @@ public:
 
 	void Update(float deltaTime)
 	{
-		if ((m_sideFlags & ESideFlags::F) == ESideFlags::F || (m_sideFlags & ESideFlags::B) == ESideFlags::B
-			|| (m_sideFlags & ESideFlags::L) == ESideFlags::L || (m_sideFlags & ESideFlags::R) == ESideFlags::R
-			|| (m_sideFlags & ESideFlags::U) == ESideFlags::U || (m_sideFlags & ESideFlags::D) == ESideFlags::D) {
-			if (IsAnimate()) {
-				UpdateSlaveTransform(m_sideFlags, m_alpha, glm::vec3(std::any_cast<glm::mat4>(m_startValue)[3]));
-			}
-			UpdateAnimation(deltaTime);
+		if (IsAnimate()) {
+			SideRotateAnimation(m_sideFlags, m_alpha, glm::vec3(std::any_cast<glm::mat4>(m_startValue)[3]));
 		}
+		else if (m_sideParent) {
+			SideRotateAnimation(m_sideParent->m_sideFlags, m_sideParent->m_alpha, m_sideParent->GetPosition());
+		}
+		UpdateAnimation(deltaTime);
 	}
 
 	void Render() override
 	{
-		if (m_sideParent) {
-			UpdateSlaveTransform(m_sideParent->m_sideFlags, m_sideParent->m_alpha, m_sideParent->GetPosition());
-		}
 		m_objectData.model = m_parent->GetModelMatrix() * GetModelMatrix();
 		Shaders::Get().UpdateUniformData<ObjectData>("model", m_objectData);
 		Renderable::Render();
@@ -137,6 +133,18 @@ public:
 
 	const ESideFlags& GetSideFlags() const { return m_sideFlags; }
 	const std::vector<glm::vec3>& GetSideColors() const { return m_sideColors; }
+
+	std::string GetMatrixInfo()
+	{
+		std::string matStr = "[ ";
+		for (int i = 0; i < m_matrix.length(); i++) {
+			for (int j = 0; j < m_matrix[i].length(); j++) {
+				matStr += (j == 0 ? "" : ", ") + std::to_string(m_matrix[i][j]);
+			}
+			matStr += (i != 3 ? "\n  " : " ]");
+		}
+		return matStr;
+	}
 
 private:
 	void CreateQuad(const std::array<glm::vec3, 4>& vs, const glm::vec3& c)
@@ -151,22 +159,19 @@ private:
 		m_sideColors.push_back(c);
 	}
 
-	void UpdateSlaveTransform(ESideFlags flags, float alpha, glm::vec3 offset)
+	void SideRotateAnimation(ESideFlags flags, float alpha, glm::vec3 offset)
 	{
-		glm::vec3 axis;
+		glm::vec3 axis = UP;
 		if ((flags & ESideFlags::F) == ESideFlags::F || (flags & ESideFlags::B) == ESideFlags::B) {
 			axis = FRONT;
 		}
 		else if ((flags & ESideFlags::L) == ESideFlags::L || (flags & ESideFlags::R) == ESideFlags::R) {
 			axis = RIGHT;
 		}
-		else {
-			axis = UP;
-		}
 		glm::mat4 matStart = std::any_cast<glm::mat4>(m_startValue);
 		glm::mat4 mat = glm::mat4(1.f);
 		mat = glm::translate(mat, offset);
-		mat = glm::rotate(mat, glm::radians(90.f * alpha), axis);
+		mat = glm::rotate(mat, glm::radians(g_rotateDeg * alpha), axis);
 		mat = glm::translate(mat, -offset);
 		m_matrix = mat * matStart;
 	}

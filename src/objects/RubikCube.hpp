@@ -1,5 +1,4 @@
 #pragma once
-#include "renderer/Renderable.hpp"
 #include "renderer/Shaders.hpp"
 #include "components/Transform.hpp"
 #include "components/Animation.hpp"
@@ -15,54 +14,19 @@ inline const glm::vec3 TOP_COLOR{ 0.66f, 0.66f, 0.66f };
 inline const glm::vec3 BOTTOM_COLOR{ 0.66f, 0.66f, 0.f };
 
 inline const float ROTATE_TIME = 0.33f;
+static inline float g_rotateDeg = 90.f;
 
 
 #include "Piece.hpp"
 
 
-class RubikCube : public Renderable, public Transform, public Animation {
+class RubikCube : public Transform, public Animation {
 public:
 	RubikCube()
 	{
-		//m_vertices.push_back(Vertex(glm::vec3(-HS, -HS,  HS), FRONT_COLOR)); // 0
-		//m_vertices.push_back(Vertex(glm::vec3(-HS,  HS,  HS), FRONT_COLOR)); // 1
-		//m_vertices.push_back(Vertex(glm::vec3( HS,  HS,  HS), FRONT_COLOR)); // 2
-		//m_vertices.push_back(Vertex(glm::vec3( HS, -HS,  HS), FRONT_COLOR)); // 3
-
-		//m_vertices.push_back(Vertex(glm::vec3( HS, -HS,  HS), RIGHT_COLOR)); // 4
-		//m_vertices.push_back(Vertex(glm::vec3( HS,  HS,  HS), RIGHT_COLOR)); // 5
-		//m_vertices.push_back(Vertex(glm::vec3( HS,  HS, -HS), RIGHT_COLOR)); // 6
-		//m_vertices.push_back(Vertex(glm::vec3( HS, -HS, -HS), RIGHT_COLOR)); // 7
-
-		//m_vertices.push_back(Vertex(glm::vec3( HS, -HS, -HS), BACK_COLOR)); // 8
-		//m_vertices.push_back(Vertex(glm::vec3( HS,  HS, -HS), BACK_COLOR)); // 9
-		//m_vertices.push_back(Vertex(glm::vec3(-HS,  HS, -HS), BACK_COLOR)); // 10
-		//m_vertices.push_back(Vertex(glm::vec3(-HS, -HS, -HS), BACK_COLOR)); // 11
-
-		//m_vertices.push_back(Vertex(glm::vec3(-HS, -HS, -HS), LEFT_COLOR)); // 12
-		//m_vertices.push_back(Vertex(glm::vec3(-HS,  HS, -HS), LEFT_COLOR)); // 13
-		//m_vertices.push_back(Vertex(glm::vec3(-HS,  HS,  HS), LEFT_COLOR)); // 14
-		//m_vertices.push_back(Vertex(glm::vec3(-HS, -HS,  HS), LEFT_COLOR)); // 15
-
-		//m_vertices.push_back(Vertex(glm::vec3(-HS,  HS,  HS), TOP_COLOR)); // 16
-		//m_vertices.push_back(Vertex(glm::vec3(-HS,  HS, -HS), TOP_COLOR)); // 17
-		//m_vertices.push_back(Vertex(glm::vec3( HS,  HS, -HS), TOP_COLOR)); // 18
-		//m_vertices.push_back(Vertex(glm::vec3( HS,  HS,  HS), TOP_COLOR)); // 19
-
-		//m_vertices.push_back(Vertex(glm::vec3(-HS, -HS, -HS), BOTTOM_COLOR)); // 20
-		//m_vertices.push_back(Vertex(glm::vec3(-HS, -HS,  HS), BOTTOM_COLOR)); // 21
-		//m_vertices.push_back(Vertex(glm::vec3( HS, -HS,  HS), BOTTOM_COLOR)); // 22
-		//m_vertices.push_back(Vertex(glm::vec3( HS, -HS, -HS), BOTTOM_COLOR)); // 23
-
-		//m_indices = {
-		//	0, 2, 1, 0, 3, 2,
-		//	4, 6, 5, 4, 7, 6,
-		//	8, 10, 9, 8, 11, 10,
-		//	12, 14, 13, 12, 15, 14,
-		//	16, 18, 17, 16, 19, 18,
-		//	20, 22, 21, 20, 23, 22
-		//};
-
+		m_pieces.reserve(26);
+		m_sides.reserve(6);
+		m_animatedPieces.reserve(9);
 		std::array<ESideFlags, 3> flags1 = { ESideFlags::F, ESideFlags::None, ESideFlags::B };
 		std::array<ESideFlags, 3> flags2 = { ESideFlags::L, ESideFlags::None, ESideFlags::R };
 		std::array<ESideFlags, 3> flags3 = { ESideFlags::U, ESideFlags::None, ESideFlags::D };
@@ -70,18 +34,17 @@ public:
 			for (const auto& f2 : flags2) {
 				for (const auto& f3 : flags3) {
 					ESideFlags flags = f1 | f2 | f3;
-					if (flags != ESideFlags::None) {
-						m_pieces.emplace_back(new Piece(this, flags));
-						switch (flags) {
-						case ESideFlags::F:
-						case ESideFlags::B:
-						case ESideFlags::L:
-						case ESideFlags::R:
-						case ESideFlags::U:
-						case ESideFlags::D:
-							m_sides.insert_or_assign(flags, m_pieces.back().get());
-							break;
-						}
+					if (flags == ESideFlags::None) continue;
+					m_pieces.emplace_back(new Piece(this, flags));
+					switch (flags) {
+					case ESideFlags::F:
+					case ESideFlags::B:
+					case ESideFlags::L:
+					case ESideFlags::R:
+					case ESideFlags::U:
+					case ESideFlags::D:
+						m_sides.insert_or_assign(flags, m_pieces.back().get());
+						break;
 					}
 				}
 			}
@@ -90,25 +53,17 @@ public:
 
 	~RubikCube()
 	{
+		m_animatedPieces.clear();
 		m_sides.clear();
 		for (auto& piece : m_pieces) {
 			if (!piece) continue;
 			piece.reset();
 		}
 		m_pieces.clear();
-
-		//m_indices.clear();
-		//m_vertices.clear();
 	}
 
-	void Init() override
+	void Init()
 	{
-		//m_indexType = GL_UNSIGNED_SHORT;
-		//InitInternal<Vertex>(m_vertices, m_indices);
-
-		//SetAttribute(0, 3, offsetof(Vertex, position));
-		//SetAttribute(1, 3, offsetof(Vertex, color));
-
 		for (auto& piece : m_pieces) {
 			if (!piece) continue;
 			piece->Init();
@@ -131,6 +86,7 @@ public:
 			case SDLK_L: sidePiece = m_sides[ESideFlags::R]; break;
 			}
 			if (sidePiece && !m_sideAnimation) {
+				g_rotateDeg = event.key.mod & SDL_KMOD_SHIFT ? -90.f : 90.f;
 				m_sideAnimation = true;
 				int index = 0;
 				glm::vec3 pos = sidePiece->GetPosition();
@@ -140,17 +96,21 @@ public:
 				else if (glm::epsilonEqual(pos.x, 0.f, 0.001f) && glm::epsilonEqual(pos.y, 0.f, 0.001f) && glm::epsilonNotEqual(pos.z, 0.f, 0.001f)) {
 					index = 2;
 				}
+				m_animatedPieces.clear();
 				for (const auto& piece : m_pieces) {
 					if (!piece || piece.get() == sidePiece) continue;
 					if (glm::epsilonEqual(pos[index], piece->GetPosition()[index], 0.001f)) {
 						piece->SetAnimationSide(sidePiece);
+						m_animatedPieces.push_back(piece.get());
 					}
 				}
+				m_animatedPieces.push_back(sidePiece);
 				sidePiece->StartAnimation(ROTATE_TIME, sidePiece->GetMatrix(), [this, sidePiece]() {
-					for (const auto& piece : m_pieces) {
-						if (!piece || piece.get() == sidePiece) continue;
+					for (const auto& piece : m_animatedPieces) {
+						if (!piece || piece == sidePiece) continue;
 						piece->SetAnimationSide(nullptr);
 					}
+					m_animatedPieces.clear();
 					m_sideAnimation = false;
 				});
 			}
@@ -164,16 +124,14 @@ public:
 			SetRotation(glm::rotate(std::any_cast<glm::quat>(m_startValue), glm::radians(90.f * m_alpha), UP));
 		}
 		UpdateAnimation(deltaTime);
-		for (const auto& piece : m_pieces) {
+		for (const auto& piece : m_animatedPieces) {
 			if (!piece) continue;
 			piece->Update(deltaTime);
 		}
 	}
 
-	void Render() override
+	void Render()
 	{
-		//Shaders::Get().UpdateUniformData<ObjectData>("model", ObjectData{ .model = GetModelMatrix() });
-		//Renderable::Render();
 		for (auto& piece : m_pieces) {
 			if (!piece) continue;
 			piece->Render();
@@ -189,13 +147,19 @@ private:
 			const auto& clrs = side->GetSideColors();
 			ImGui::TextColored(ImVec4(clrs[0].r, clrs[0].g, clrs[0].b, 1.f), "Side_%d: (X=%f, Y=%f, Z=%f)", (int)side->GetSideFlags(), pos.x, pos.y, pos.z);
 		}
+		ImGui::SeparatorText("[ Matrices ]");
+		for (size_t i = 0; i < m_pieces.size(); i++) {
+			if (!m_pieces[i]) continue;
+			ImGui::Text("(%d) Piece_%d:\n%s", i + 1, (int)m_pieces[i]->GetSideFlags(), m_pieces[i]->GetMatrixInfo().c_str());
+			ImGui::NewLine();
+		}
+		ImGui::Separator();
 	}
 
 private:
-	//std::vector<Vertex> m_vertices;
-	//std::vector<uint16_t> m_indices;
 	std::vector<std::unique_ptr<Piece>> m_pieces;
 	std::unordered_map<ESideFlags, Piece*> m_sides;
 	bool m_sideAnimation = false;
+	std::vector<Piece*> m_animatedPieces;
 
 };

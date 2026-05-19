@@ -7,7 +7,6 @@ class Assets;
 class Shaders;
 class RubikCube;
 class Camera;
-//class TestCorner;
 
 
 class Game {
@@ -30,6 +29,5 @@ private:
 	std::unique_ptr<Shaders> m_shaders;
 	std::unique_ptr<Camera> m_camera;
 	std::unique_ptr<RubikCube> m_cube;
-	//std::unique_ptr<TestCorner> m_test;
 
 };
