@@ -78,15 +78,21 @@ public:
 			Piece* sidePiece = nullptr;
 			switch (event.key.key) {
 			case SDLK_SPACE: StartAnimation(ROTATE_TIME, GetRotation()); break;
+			case SDLK_KP_5:
 			case SDLK_U: sidePiece = m_sides[ESideFlags::F]; break;
+			case SDLK_KP_8:
 			case SDLK_I: sidePiece = m_sides[ESideFlags::U]; break;
+			case SDLK_KP_0:
 			case SDLK_O: sidePiece = m_sides[ESideFlags::B]; break;
+			case SDLK_KP_4:
 			case SDLK_J: sidePiece = m_sides[ESideFlags::L]; break;
+			case SDLK_KP_2:
 			case SDLK_K: sidePiece = m_sides[ESideFlags::D]; break;
+			case SDLK_KP_6:
 			case SDLK_L: sidePiece = m_sides[ESideFlags::R]; break;
 			}
 			if (sidePiece && !m_sideAnimation) {
-				g_rotateDeg = event.key.mod & SDL_KMOD_SHIFT ? -90.f : 90.f;
+				g_rotateDeg = event.key.mod & SDL_KMOD_CTRL ? -90.f : 90.f;
 				m_sideAnimation = true;
 				int index = 0;
 				glm::vec3 pos = sidePiece->GetPosition();
@@ -159,7 +165,7 @@ private:
 private:
 	std::vector<std::unique_ptr<Piece>> m_pieces;
 	std::unordered_map<ESideFlags, Piece*> m_sides;
-	bool m_sideAnimation = false;
 	std::vector<Piece*> m_animatedPieces;
+	bool m_sideAnimation = false;
 
 };
