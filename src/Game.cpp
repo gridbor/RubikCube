@@ -3,6 +3,7 @@
 #include "renderer/Shaders.hpp"
 #include "objects/Camera.hpp"
 #include "objects/RubikCube.hpp"
+#include "renderer/Quad.hpp"
 #include "objects/Raycast.hpp"
 #include "GUI.hpp"
 
@@ -18,8 +19,9 @@ Game::Game(float w, float h):
 	m_assets = std::make_unique<Assets>();
 	m_shaders = std::make_unique<Shaders>();
 	m_camera = std::make_unique<Camera>(glm::vec3(-5.f, 5.f, 5.f), glm::radians(-45.f), glm::radians(-37.f));
-	m_cube = std::make_unique<RubikCube>();
 	m_raycast = std::make_unique<Raycast>(m_camera.get(), m_width, m_height);
+	m_cube = std::make_unique<RubikCube>();
+	m_groundQuad = std::make_unique<Quad>();
 
 	//GUI::Get().Disable();
 	GUI::Get().AddGuiFunction("KeysInfo", []() {
@@ -30,8 +32,9 @@ Game::Game(float w, float h):
 
 Game::~Game()
 {
-	m_raycast.reset();
+	m_groundQuad.reset();
 	m_cube.reset();
+	m_raycast.reset();
 	m_camera.reset();
 	m_shaders.reset();
 	m_assets.reset();
@@ -44,6 +47,7 @@ void Game::Init()
 	m_shaders->CreateUniformBuffer<ProjectionViewData>("PV", 0, &m_camera->GetProjectionViewData());
 	m_shaders->CreateUniformBuffer<ObjectData>("model", 1);
 	m_cube->Init();
+	m_groundQuad->Init();
 }
 
 void Game::EventProcess(const SDL_Event& event)
@@ -64,5 +68,6 @@ void Game::Render()
 {
 	m_shaders->BindProgramPipeline("default");
 	m_shaders->UpdateUniformData<ProjectionViewData>("PV", m_camera->GetProjectionViewData());
+	m_groundQuad->Render();
 	m_cube->Render();
 }

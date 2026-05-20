@@ -24,7 +24,6 @@ class Piece : public Renderable, public Transform, public Animation, public Coll
 public:
 	Piece(Transform* parent, ESideFlags flags) : m_parent{ parent }, m_sideFlags { flags }
 	{
-		const float MUL = 2.1f;
 		std::array<glm::vec3, 3> offset{};
 		if ((flags & ESideFlags::F) != ESideFlags::None) {
 			CreateQuad({
@@ -103,6 +102,7 @@ public:
 
 		SetAttribute(0, 3, offsetof(Vertex, position));
 		SetAttribute(1, 3, offsetof(Vertex, color));
+		SetAttribute(2, 2, offsetof(Vertex, uv));
 
 		if ((m_sideFlags & ESideFlags::L) != ESideFlags::None && (m_sideFlags & ESideFlags::U) != ESideFlags::None && (m_sideFlags & ESideFlags::F) != ESideFlags::None) {
 			GUI::Get().AddGuiFunction("PieceNearestCorner", [=]() {
@@ -163,16 +163,29 @@ public:
 		return matStr;
 	}
 
+	bool IsCenter() const
+	{
+		if ((m_sideFlags & ~ESideFlags::F) == ESideFlags::None
+			|| (m_sideFlags & ~ESideFlags::B) == ESideFlags::None
+			|| (m_sideFlags & ~ESideFlags::L) == ESideFlags::None
+			|| (m_sideFlags & ~ESideFlags::R) == ESideFlags::None
+			|| (m_sideFlags & ~ESideFlags::U) == ESideFlags::None
+			|| (m_sideFlags & ~ESideFlags::D) == ESideFlags::None) {
+			return true;
+		}
+		return false;
+	}
+
 	void ToggleVisibility() { m_visible = !m_visible; }
 
 private:
 	void CreateQuad(const std::array<glm::vec3, 4>& vs, const glm::vec3& c)
 	{
 		uint16_t i = (uint16_t)m_vertices.size();
-		m_vertices.push_back(Vertex(vs[0], c));
-		m_vertices.push_back(Vertex(vs[1], c));
-		m_vertices.push_back(Vertex(vs[2], c));
-		m_vertices.push_back(Vertex(vs[3], c));
+		m_vertices.push_back(Vertex(vs[0], c, glm::vec2(0.f, 0.f)));
+		m_vertices.push_back(Vertex(vs[1], c, glm::vec2(0.f, 1.f)));
+		m_vertices.push_back(Vertex(vs[2], c, glm::vec2(1.f, 1.f)));
+		m_vertices.push_back(Vertex(vs[3], c, glm::vec2(1.f, 0.f)));
 		m_indices.insert(m_indices.end(), { i, (uint16_t)(i + 2), (uint16_t)(i + 1), i, (uint16_t)(i + 3), (uint16_t)(i + 2) });
 
 		m_sideColors.push_back(c);

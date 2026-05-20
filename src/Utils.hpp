@@ -3,6 +3,7 @@
 #include <utility>
 #include <cstdint>
 #include <type_traits>
+#include <string>
 
 
 template<typename T>
@@ -78,6 +79,7 @@ constexpr T& operator^=(T& lhs, T rhs) noexcept
 
 
 inline const float HS = 0.5f;
+inline const float MUL = 2.0f;
 inline const glm::vec3 FRONT_COLOR{ 0.f, 0.f, 0.66f };
 inline const glm::vec3 BACK_COLOR{ 0.f, 0.66f, 0.f };
 inline const glm::vec3 LEFT_COLOR{ 0.66f, 0.f, 0.f };
@@ -87,3 +89,15 @@ inline const glm::vec3 BOTTOM_COLOR{ 0.66f, 0.66f, 0.f };
 
 inline const float ROTATE_TIME = 0.33f;
 static inline float g_rotateDeg = 90.f;
+
+
+template<typename T>
+static inline std::string VecToString(const T& vec)
+{
+	std::string s = "( ";
+	for (int i = 0; i < vec.length(); i++) {
+		s += (i == 0 ? "" : ", ") + std::to_string(vec[i]);
+	}
+	s += " )";
+	return s.c_str();
+}

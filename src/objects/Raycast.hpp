@@ -24,6 +24,20 @@ public:
 		return nearMax;
 	}
 
+	std::optional<float> IntersectPlane(const glm::vec3& planePoint, const glm::vec3& planeNormal)
+	{
+		float denom = glm::dot(planeNormal, direction);
+		if (glm::epsilonEqual(glm::abs(denom), 0.f, std::numeric_limits<float>::epsilon())) {
+			return std::nullopt;
+		}
+		glm::vec3 pointDist = planePoint - origin;
+		float dist = glm::dot(pointDist, planeNormal) / denom;
+		if (dist < 0.f) {
+			return std::nullopt;
+		}
+		return dist;
+	}
+
 	glm::vec3 origin;
 	glm::vec3 direction;
 };

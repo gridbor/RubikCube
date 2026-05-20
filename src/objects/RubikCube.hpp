@@ -7,6 +7,14 @@
 #include "GUI.hpp"
 
 
+struct MouseInteract {
+	Piece* target{ nullptr };
+	glm::vec2 mouseHit{};
+	bool motionPrevent{ false };
+	glm::vec3 hitPoint{};
+};
+
+
 class RubikCube : public Transform, public Animation {
 public:
 	RubikCube()
@@ -40,6 +48,7 @@ public:
 
 	~RubikCube()
 	{
+		m_interact.target = nullptr;
 		m_animatedPieces.clear();
 		m_sides.clear();
 		for (auto& piece : m_pieces) {
@@ -82,41 +91,34 @@ public:
 			if (sidePiece && !m_sideAnimation) {
 				g_rotateDeg = event.key.mod & SDL_KMOD_CTRL ? -90.f : 90.f;
 				m_sideAnimation = true;
-				int index = 0;
-				glm::vec3 pos = sidePiece->GetPosition();
-				if (glm::epsilonEqual(pos.x, 0.f, 0.001f) && glm::epsilonNotEqual(pos.y, 0.f, 0.001f) && glm::epsilonEqual(pos.z, 0.f, 0.001f)) {
-					index = 1;
-				}
-				else if (glm::epsilonEqual(pos.x, 0.f, 0.001f) && glm::epsilonEqual(pos.y, 0.f, 0.001f) && glm::epsilonNotEqual(pos.z, 0.f, 0.001f)) {
-					index = 2;
-				}
-				m_animatedPieces.clear();
-				for (const auto& piece : m_pieces) {
-					if (!piece || piece.get() == sidePiece) continue;
-					if (glm::epsilonEqual(pos[index], piece->GetPosition()[index], 0.001f)) {
-						piece->SetAnimationSide(sidePiece);
-						m_animatedPieces.push_back(piece.get());
-					}
-				}
-				m_animatedPieces.push_back(sidePiece);
-				sidePiece->StartAnimation(ROTATE_TIME, sidePiece->GetMatrix(), [this, sidePiece]() {
-					for (const auto& piece : m_animatedPieces) {
-						if (!piece || piece == sidePiece) continue;
-						piece->SetAnimationSide(nullptr);
-					}
-					m_animatedPieces.clear();
-					m_sideAnimation = false;
-				});
+				StartRotateAnimation(sidePiece);
 			}
 		}
 		else if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
 			if (event.button.button == SDL_BUTTON_LEFT) {
-				Piece* selection = GetSelectPiece(event.motion.x, event.motion.y);
-				if (selection) {
-					prevent = true;
-					selection->ToggleVisibility();
+				m_interact.target = GetSelectPiece(event.button.x, event.button.y);
+				m_interact.mouseHit = glm::vec2(event.button.x, event.button.y);
+			}
+		}
+		else if (event.type == SDL_EVENT_MOUSE_BUTTON_UP) {
+			if (event.button.button == SDL_BUTTON_LEFT) {
+				m_interact.target = nullptr;
+				m_interact.motionPrevent = false;
+			}
+		}
+		else if (event.type == SDL_EVENT_MOUSE_MOTION) {
+			if (m_interact.target && (event.motion.state & SDL_BUTTON_LMASK)) {
+				prevent = true;
+				if (!m_interact.target->IsCenter()) {
+					glm::vec2 moveDelta = m_interact.mouseHit - glm::vec2(event.motion.x, event.motion.y);
+					if (glm::length(moveDelta) > 20.f) {
+						StartRotate(moveDelta);
+						m_interact.motionPrevent = true;
+						m_interact.target = nullptr;
+					}
 				}
 			}
+			if (m_interact.motionPrevent) prevent = true;
 		}
 		return prevent;
 	}
@@ -142,6 +144,35 @@ public:
 	}
 
 private:
+	void StartRotateAnimation(Piece* sidePiece)
+	{
+		int index = 0;
+		glm::vec3 pos = sidePiece->GetPosition();
+		if (glm::epsilonEqual(pos.x, 0.f, 0.001f) && glm::epsilonNotEqual(pos.y, 0.f, 0.001f) && glm::epsilonEqual(pos.z, 0.f, 0.001f)) {
+			index = 1;
+		}
+		else if (glm::epsilonEqual(pos.x, 0.f, 0.001f) && glm::epsilonEqual(pos.y, 0.f, 0.001f) && glm::epsilonNotEqual(pos.z, 0.f, 0.001f)) {
+			index = 2;
+		}
+		m_animatedPieces.clear();
+		for (const auto& piece : m_pieces) {
+			if (!piece || piece.get() == sidePiece) continue;
+			if (glm::epsilonEqual(pos[index], piece->GetPosition()[index], 0.001f)) {
+				piece->SetAnimationSide(sidePiece);
+				m_animatedPieces.push_back(piece.get());
+			}
+		}
+		m_animatedPieces.push_back(sidePiece);
+		sidePiece->StartAnimation(ROTATE_TIME, sidePiece->GetMatrix(), [this, sidePiece]() {
+			for (const auto& piece : m_animatedPieces) {
+				if (!piece || piece == sidePiece) continue;
+				piece->SetAnimationSide(nullptr);
+			}
+			m_animatedPieces.clear();
+			m_sideAnimation = false;
+		});
+	}
+
 	void CubeGUIDraw()
 	{
 		for (const auto& [_, side] : m_sides) {
@@ -184,7 +215,48 @@ private:
 				}
 			}
 		}
+		if (select) m_interact.hitPoint = ray.origin + ray.direction * minValue;
 		return select;
+	}
+
+	void StartRotate(const glm::vec2& moveDelta)
+	{
+		if (m_interact.target == nullptr) return;
+		AABB bbox = m_interact.target->GetBoundingBox();
+		const float limit = HS * MUL + HS;
+		glm::bvec3 minEdge = glm::epsilonEqual(glm::abs(bbox.min), glm::vec3(limit), 0.001f);
+		glm::bvec3 maxEdge = glm::epsilonEqual(glm::abs(bbox.max), glm::vec3(limit), 0.001f);
+		glm::bvec3 hitEdge = glm::epsilonEqual(glm::abs(m_interact.hitPoint), glm::vec3(limit), 0.001f);
+		if (hitEdge.x && hitEdge.y || hitEdge.x && hitEdge.z || hitEdge.y && hitEdge.z) {
+			SDL_Log("Hitted to edge ignore");
+			return;
+		}
+		std::vector<ESideFlags> oppositeSides;
+		std::array<bool, 6> boxHitEdges = { minEdge.x, minEdge.y, minEdge.z, maxEdge.x, maxEdge.y, maxEdge.z };
+		std::array<ESideFlags, 3> negative = { ESideFlags::L, ESideFlags::D, ESideFlags::B };
+		std::array<ESideFlags, 3> positive = { ESideFlags::R, ESideFlags::U, ESideFlags::F };
+		for (int i = 0; i < boxHitEdges.size(); i++) {
+			const glm::vec3& v = i < 3 ? bbox.min : bbox.max;
+			if (boxHitEdges[i] && ((hitEdge.x && (i % 3 != 0)) || (hitEdge.y && (i % 3 != 1)) || (hitEdge.z && (i % 3 != 2)))) {
+				oppositeSides.push_back(v[i % 3] < 0.f ? negative[i % 3] : positive[i % 3]);
+			}
+		}
+		glm::vec2 cursorPoint = m_interact.mouseHit - moveDelta;
+		Ray ray = Raycast::Get().MakeCameraRay(cursorPoint.x, cursorPoint.y);
+		glm::vec3 hitNormal{};
+		hitNormal.x = hitEdge.x ? glm::sign(m_interact.hitPoint.x) : 0.f;
+		hitNormal.y = hitEdge.y ? glm::sign(m_interact.hitPoint.y) : 0.f;
+		hitNormal.z = hitEdge.z ? glm::sign(m_interact.hitPoint.z) : 0.f;
+		if (auto dist = ray.IntersectPlane(m_interact.hitPoint, hitNormal)) {
+			glm::vec3 currentPoint = ray.origin + ray.direction * (*dist);
+			SDL_Log("Hit: %s | Cursor: %s", VecToString(m_interact.hitPoint).c_str(), VecToString(currentPoint).c_str());
+			if (oppositeSides.size() > 1) {
+
+			}
+			else if (oppositeSides.size() > 0) {
+
+			}
+		}
 	}
 
 private:
@@ -192,5 +264,6 @@ private:
 	std::unordered_map<ESideFlags, Piece*> m_sides;
 	std::vector<Piece*> m_animatedPieces;
 	bool m_sideAnimation = false;
+	MouseInteract m_interact{};
 
 };
