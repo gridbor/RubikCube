@@ -2,11 +2,14 @@
 #include <memory>
 #include <SDL3/SDL.h>
 
+#include "Utils.hpp"
+
 
 class Assets;
 class Shaders;
 class RubikCube;
 class Camera;
+class Raycast;
 
 
 class Game {
@@ -29,5 +32,6 @@ private:
 	std::unique_ptr<Shaders> m_shaders;
 	std::unique_ptr<Camera> m_camera;
 	std::unique_ptr<RubikCube> m_cube;
+	std::unique_ptr<Raycast> m_raycast;
 
 };

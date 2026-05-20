@@ -3,6 +3,7 @@
 #include "renderer/Shaders.hpp"
 #include "objects/Camera.hpp"
 #include "objects/RubikCube.hpp"
+#include "objects/Raycast.hpp"
 #include "GUI.hpp"
 
 #include <glm/glm.hpp>
@@ -18,8 +19,9 @@ Game::Game(float w, float h):
 	m_shaders = std::make_unique<Shaders>();
 	m_camera = std::make_unique<Camera>(glm::vec3(-5.f, 5.f, 5.f), glm::radians(-45.f), glm::radians(-37.f));
 	m_cube = std::make_unique<RubikCube>();
+	m_raycast = std::make_unique<Raycast>(m_camera.get(), m_width, m_height);
 
-	GUI::Get().Disable();
+	//GUI::Get().Disable();
 	GUI::Get().AddGuiFunction("KeysInfo", []() {
 		ImGui::Text("WASD - Camera move\nE/Q - Camera Up/Down");
 		ImGui::Text("U - BLUE side rotate\nI - WHITE side rotate\nO - GREEN side rotate\nJ - RED side rotate\nK - YELLOW side rotate\nL - ORANGE side rotate\n");
@@ -28,6 +30,7 @@ Game::Game(float w, float h):
 
 Game::~Game()
 {
+	m_raycast.reset();
 	m_cube.reset();
 	m_camera.reset();
 	m_shaders.reset();

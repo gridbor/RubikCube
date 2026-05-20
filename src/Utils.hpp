@@ -72,3 +72,18 @@ constexpr T& operator^=(T& lhs, T rhs) noexcept
 #define BITMASK_ENUM(EnumName) \
 	template<> \
 	struct is_bitmask_enum<EnumName> : std::true_type {};
+
+
+#include <glm/glm.hpp>
+
+
+inline const float HS = 0.5f;
+inline const glm::vec3 FRONT_COLOR{ 0.f, 0.f, 0.66f };
+inline const glm::vec3 BACK_COLOR{ 0.f, 0.66f, 0.f };
+inline const glm::vec3 LEFT_COLOR{ 0.66f, 0.f, 0.f };
+inline const glm::vec3 RIGHT_COLOR{ 0.66f, 0.33f, 0.f };
+inline const glm::vec3 TOP_COLOR{ 0.66f, 0.66f, 0.66f };
+inline const glm::vec3 BOTTOM_COLOR{ 0.66f, 0.66f, 0.f };
+
+inline const float ROTATE_TIME = 0.33f;
+static inline float g_rotateDeg = 90.f;

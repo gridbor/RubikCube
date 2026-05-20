@@ -2,6 +2,7 @@
 #include "renderer/Renderable.hpp"
 #include "components/Transform.hpp"
 #include "components/Animation.hpp"
+#include "components/Collision.hpp"
 #include "GUI.hpp"
 
 #include <array>
@@ -19,7 +20,7 @@ enum class ESideFlags : unsigned char {
 BITMASK_ENUM(ESideFlags)
 
 
-class Piece : public Renderable, public Transform, public Animation {
+class Piece : public Renderable, public Transform, public Animation, public Collision {
 public:
 	Piece(Transform* parent, ESideFlags flags) : m_parent{ parent }, m_sideFlags { flags }
 	{
@@ -82,7 +83,10 @@ public:
 			offset[2] = glm::vec3(0.f, -HS * MUL, 0.f);
 		}
 
-		SetPosition(offset[0] + offset[1] + offset[2]);
+		glm::vec3 pos = offset[0] + offset[1] + offset[2];
+		SetPosition(pos);
+		m_bounds.min = pos - HS;
+		m_bounds.max = pos + HS;
 	}
 
 	~Piece()
@@ -99,6 +103,12 @@ public:
 
 		SetAttribute(0, 3, offsetof(Vertex, position));
 		SetAttribute(1, 3, offsetof(Vertex, color));
+
+		if ((m_sideFlags & ESideFlags::L) != ESideFlags::None && (m_sideFlags & ESideFlags::U) != ESideFlags::None && (m_sideFlags & ESideFlags::F) != ESideFlags::None) {
+			GUI::Get().AddGuiFunction("PieceNearestCorner", [=]() {
+				ImGui::Text("Bounds:\n    min = (%f, %f, %f)\n    max = (%f, %f, %f)", m_bounds.min.x, m_bounds.min.y, m_bounds.min.z, m_bounds.max.x, m_bounds.max.y, m_bounds.max.z);
+			});
+		}
 	}
 
 	void SetAnimationSide(Piece* sideParent)
@@ -106,6 +116,7 @@ public:
 		if (m_sideParent && !sideParent) {
 			SideRotateAnimation(m_sideParent->m_sideFlags, 1.f, m_sideParent->GetPosition());
 			m_startValue.reset();
+			m_boundsNeedUpdate = true;
 		}
 		else if (sideParent) {
 			m_startValue = m_matrix;
@@ -127,9 +138,15 @@ public:
 	void Render() override
 	{
 		m_objectData.model = m_parent->GetModelMatrix() * GetModelMatrix();
+		if (m_boundsNeedUpdate) {
+			UpdateBounds(m_objectData.model);
+			m_boundsNeedUpdate = false;
+		}
 		Shaders::Get().UpdateUniformData<ObjectData>("model", m_objectData);
-		Renderable::Render();
+		if (m_visible) Renderable::Render();
 	}
+
+	void RefreshBounds() { m_boundsNeedUpdate = true; }
 
 	const ESideFlags& GetSideFlags() const { return m_sideFlags; }
 	const std::vector<glm::vec3>& GetSideColors() const { return m_sideColors; }
@@ -145,6 +162,8 @@ public:
 		}
 		return matStr;
 	}
+
+	void ToggleVisibility() { m_visible = !m_visible; }
 
 private:
 	void CreateQuad(const std::array<glm::vec3, 4>& vs, const glm::vec3& c)
@@ -184,5 +203,6 @@ private:
 	Transform* m_parent = nullptr;
 	Piece* m_sideParent = nullptr;
 	std::vector<glm::vec3> m_sideColors;
+	bool m_visible = true;
 
 };

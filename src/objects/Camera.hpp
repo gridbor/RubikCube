@@ -55,6 +55,8 @@ public:
 		}
 	}
 
+	const glm::vec3& GetPosition() const { return m_position; }
+
 private:
 	void UpdateVectors()
 	{

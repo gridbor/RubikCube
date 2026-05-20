@@ -2,22 +2,9 @@
 #include "renderer/Shaders.hpp"
 #include "components/Transform.hpp"
 #include "components/Animation.hpp"
-#include "GUI.hpp"
-
-
-inline const float HS = 0.5f;
-inline const glm::vec3 FRONT_COLOR{ 0.f, 0.f, 0.66f };
-inline const glm::vec3 BACK_COLOR{ 0.f, 0.66f, 0.f };
-inline const glm::vec3 LEFT_COLOR{ 0.66f, 0.f, 0.f };
-inline const glm::vec3 RIGHT_COLOR{ 0.66f, 0.33f, 0.f };
-inline const glm::vec3 TOP_COLOR{ 0.66f, 0.66f, 0.66f };
-inline const glm::vec3 BOTTOM_COLOR{ 0.66f, 0.66f, 0.f };
-
-inline const float ROTATE_TIME = 0.33f;
-static inline float g_rotateDeg = 90.f;
-
-
 #include "Piece.hpp"
+#include "Raycast.hpp"
+#include "GUI.hpp"
 
 
 class RubikCube : public Transform, public Animation {
@@ -74,10 +61,11 @@ public:
 
 	bool EventProcess(const SDL_Event& event)
 	{
+		bool prevent = false;
 		if (event.type == SDL_EVENT_KEY_DOWN) {
 			Piece* sidePiece = nullptr;
 			switch (event.key.key) {
-			case SDLK_SPACE: StartAnimation(ROTATE_TIME, GetRotation()); break;
+			case SDLK_SPACE: StartAnimation(ROTATE_TIME, GetRotation(), std::bind(&RubikCube::UpdatePieceBounds, this)); break;
 			case SDLK_KP_5:
 			case SDLK_U: sidePiece = m_sides[ESideFlags::F]; break;
 			case SDLK_KP_8:
@@ -121,7 +109,16 @@ public:
 				});
 			}
 		}
-		return false;
+		else if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
+			if (event.button.button == SDL_BUTTON_LEFT) {
+				Piece* selection = GetSelectPiece(event.motion.x, event.motion.y);
+				if (selection) {
+					prevent = true;
+					selection->ToggleVisibility();
+				}
+			}
+		}
+		return prevent;
 	}
 
 	void Update(float deltaTime)
@@ -153,13 +150,41 @@ private:
 			const auto& clrs = side->GetSideColors();
 			ImGui::TextColored(ImVec4(clrs[0].r, clrs[0].g, clrs[0].b, 1.f), "Side_%d: (X=%f, Y=%f, Z=%f)", (int)side->GetSideFlags(), pos.x, pos.y, pos.z);
 		}
-		ImGui::SeparatorText("[ Matrices ]");
+
+		/*ImGui::SeparatorText("[ Matrices ]");
 		for (size_t i = 0; i < m_pieces.size(); i++) {
 			if (!m_pieces[i]) continue;
 			ImGui::Text("(%d) Piece_%d:\n%s", i + 1, (int)m_pieces[i]->GetSideFlags(), m_pieces[i]->GetMatrixInfo().c_str());
 			ImGui::NewLine();
 		}
-		ImGui::Separator();
+		ImGui::Separator();*/
+	}
+
+	void UpdatePieceBounds()
+	{
+		for (const auto& piece : m_pieces) {
+			if (!piece) continue;
+			piece->RefreshBounds();
+		}
+	}
+
+	Piece* GetSelectPiece(float x, float y)
+	{
+		Piece* select = nullptr;
+		if (IsAnimate() || m_sideAnimation) return select;
+
+		Ray ray = Raycast::Get().MakeCameraRay(x, y);
+		float minValue = std::numeric_limits<float>::max();
+		for (const auto& piece : m_pieces) {
+			if (!piece) continue;
+			if (auto t = ray.IntersectAABB(piece->GetBoundingBox())) {
+				if (*t < minValue) {
+					minValue = *t;
+					select = piece.get();
+				}
+			}
+		}
+		return select;
 	}
 
 private:
