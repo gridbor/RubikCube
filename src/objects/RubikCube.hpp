@@ -148,6 +148,10 @@ public:
 private:
 	void StartRotateAnimation(Piece* sidePiece)
 	{
+		if (sidePiece == nullptr) {
+			SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Piece is not rotate axis!");
+			return;
+		}
 		int index = 0;
 		glm::vec3 pos = sidePiece->GetPosition();
 		if (glm::epsilonEqual(pos.x, 0.f, 0.001f) && glm::epsilonNotEqual(pos.y, 0.f, 0.001f) && glm::epsilonEqual(pos.z, 0.f, 0.001f)) {
@@ -243,28 +247,27 @@ private:
 			glm::vec3 deltaDistance = currentPoint - m_interact.hitPoint;
 			glm::bvec3 sectors = glm::greaterThan(glm::abs(m_interact.hitPoint), glm::vec3(HS));
 			glm::bvec3 centerAxis = glm::lessThan(glm::abs(m_interact.hitPoint), glm::vec3(HS));
-			float dir = glm::dot(glm::normalize(deltaDistance), glm::normalize(glm::cross(hitNormal, glm::vec3(centerAxis))));
 			ESideFlags side = ESideFlags::FB | ESideFlags::LR | ESideFlags::UD;
 			side &= ~(hitEdge.x ? ESideFlags::LR : (hitEdge.y ? ESideFlags::UD : ESideFlags::FB));
 			if (sectors.x) side &= ~(hitSigns.x < 0.f ? ESideFlags::R : ESideFlags::L);
 			if (sectors.y) side &= ~(hitSigns.y < 0.f ? ESideFlags::U : ESideFlags::D);
 			if (sectors.z) side &= ~(hitSigns.z < 0.f ? ESideFlags::F : ESideFlags::B);
 			glm::vec3 absDD = glm::abs(deltaDistance);
+			int aIndex = (absDD.x > absDD.y && absDD.x > absDD.z) ? 0 : (absDD.y > absDD.z ? 1 : 2);
 			int nIndex = glm::epsilonNotEqual(hitNormal.x, 0.f, 0.001f) ? 0 : (glm::epsilonNotEqual(hitNormal.y, 0.f, 0.001f) ? 1 : 2);
+			side &= ~(aIndex == 0 ? ESideFlags::LR : aIndex == 1 ? ESideFlags::UD : ESideFlags::FB);
+			bool animate = true;
 			if (glm::any(centerAxis)) {
-				side &= ~(centerAxis.x ? ESideFlags::LR : (centerAxis.y ? ESideFlags::UD : ESideFlags::FB));
-				if (glm::abs(dir) < 0.9f) {
-					int aIndex = (absDD.x > absDD.y && absDD.x > absDD.z) ? 0 : (absDD.y > absDD.z ? 1 : 2);
-					float angleSign = (aIndex == 1 && glm::epsilonNotEqual(hitNormal.z, 0.f, 0.001f)) ? -1.f : 1.f;
-					angleSign *= deltaDistance[aIndex] > 0.f ? 1.f : -1.f;
-					angleSign *= hitNormal[nIndex] < 0.f && nIndex != 0 ? -1.f : (nIndex == 0 && hitNormal[nIndex] > 0.f ? -1.f : 1.f);
-					g_rotateDeg = 90.f * angleSign;
-					m_sideAnimation = true;
-					StartRotateAnimation(m_sides[side]);
-				}
+				float dir = glm::dot(glm::normalize(deltaDistance), glm::normalize(glm::cross(hitNormal, glm::vec3(centerAxis))));
+				animate = glm::abs(dir) < 0.9f;
 			}
-			else {
-				
+			if (animate) {
+				float angleSign = (aIndex == 1 && glm::epsilonNotEqual(hitNormal.z, 0.f, 0.001f)) ? -1.f : 1.f;
+				angleSign *= deltaDistance[aIndex] > 0.f ? 1.f : -1.f;
+				angleSign *= hitNormal[nIndex] < 0.f && nIndex != 0 ? -1.f : (nIndex == 0 && hitNormal[nIndex] > 0.f ? -1.f : 1.f);
+				g_rotateDeg = 90.f * angleSign;
+				m_sideAnimation = true;
+				StartRotateAnimation(m_sides[side]);
 			}
 		}
 	}
