@@ -34,9 +34,15 @@ public:
 	{
 		m_yaw += glm::radians(x * m_mouseSensitivity);
 		m_pitch -= glm::radians(y * m_mouseSensitivity);
-		m_pitch = glm::clamp(m_pitch, glm::radians(-89.f), glm::radians(89.f));
+		m_pitch = glm::clamp(m_pitch, -PITCH_LIMIT, PITCH_LIMIT);
 
 		UpdateVectors();
+	}
+
+	void MoveArm(float x, float y)
+	{
+		MouseMove(x, y);
+		LookToTarget();
 	}
 
 	void UpdatePosition(float deltaTime)
@@ -57,6 +63,16 @@ public:
 
 	const glm::vec3& GetPosition() const { return m_position; }
 
+	/*void TargetAiming()
+	{
+		float radius = glm::length(m_position);
+		if (radius < 0.001f) radius = 0.001f;
+		glm::vec3 dir = m_position / radius;
+		m_yaw = glm::atan(dir.x, dir.z);
+		m_pitch = glm::clamp(glm::asin(dir.y), -PITCH_LIMIT, PITCH_LIMIT);
+		UpdateVectors();
+	}*/
+
 private:
 	void UpdateVectors()
 	{
@@ -74,6 +90,13 @@ private:
 	void UpdateView()
 	{
 		m_pvData.view = glm::lookAt(m_position, m_position + m_front, m_up);
+	}
+
+	void LookToTarget()
+	{
+		float radius = glm::length(m_position);
+		m_position = -radius * m_front;
+		UpdateView();
 	}
 
 private:

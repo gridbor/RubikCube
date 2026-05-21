@@ -100,7 +100,7 @@ inline const glm::vec3 BOTTOM_COLOR{ 0.66f, 0.66f, 0.f };
 
 inline const float ROTATE_TIME = 0.33f;
 static inline float g_rotateDeg = 90.f;
-
+inline const float PITCH_LIMIT = glm::radians(89.f);
 
 template<typename T>
 static inline std::string VecToString(const T& vec)

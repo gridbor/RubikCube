@@ -53,8 +53,18 @@ void Game::Init()
 void Game::EventProcess(const SDL_Event& event)
 {
 	if (m_cube->EventProcess(event)) return;
-	if (event.type == SDL_EVENT_MOUSE_MOTION && (event.motion.state & SDL_BUTTON_LMASK)) {
- 		m_camera->MouseMove(event.motion.xrel, event.motion.yrel);
+	if (event.type == SDL_EVENT_MOUSE_MOTION) {
+		if (event.motion.state & SDL_BUTTON_LMASK) {
+			m_camera->MouseMove(event.motion.xrel, event.motion.yrel);
+		}
+		else if (event.motion.state & SDL_BUTTON_RMASK) {
+			m_camera->MoveArm(event.motion.xrel, event.motion.yrel);
+		}
+	}
+	else if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
+		if (event.button.button == SDL_BUTTON_RIGHT) {
+			//m_camera->TargetAiming();
+		}
 	}
 }
 
