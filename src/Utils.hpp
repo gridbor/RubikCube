@@ -70,6 +70,17 @@ constexpr T& operator^=(T& lhs, T rhs) noexcept
 	return lhs;
 }
 
+template<BitmaskEnum T>
+constexpr bool BitmaskHasFlag(T lhs, T rhs) noexcept
+{
+	return (lhs & rhs) == rhs;
+}
+template<BitmaskEnum T>
+constexpr bool BitmaskOnlyFlag(T lhs, T rhs) noexcept
+{
+	return (lhs & ~rhs) == static_cast<T>(0);
+}
+
 #define BITMASK_ENUM(EnumName) \
 	template<> \
 	struct is_bitmask_enum<EnumName> : std::true_type {};

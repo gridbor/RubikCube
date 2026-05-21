@@ -6,12 +6,17 @@ layout(location = 0) out vec4 ResultColor;
 
 void main()
 {
-	float edge = 0.03;
-	float left = smoothstep(0.0, edge, vUV.x);
-	float right = smoothstep(1.0, 1.0 - edge, vUV.x);
-	float bottom = smoothstep(0.0, edge, vUV.y);
-	float top = smoothstep(1.0, 1.0 - edge, vUV.y);
-	float factor = left * right * bottom * top;
-	vec3 cc = vColor * factor;
-	ResultColor = vec4(cc, 1.0);
+	if (gl_FrontFacing) {
+		float edge = 0.03;
+		float left = smoothstep(0.0, edge, vUV.x);
+		float right = smoothstep(1.0, 1.0 - edge, vUV.x);
+		float bottom = smoothstep(0.0, edge, vUV.y);
+		float top = smoothstep(1.0, 1.0 - edge, vUV.y);
+		float factor = left * right * bottom * top;
+		vec3 cc = vColor * factor;
+		ResultColor = vec4(cc, 1.0);
+	}
+	else {
+		ResultColor = vec4(0.0, 0.0, 0.0, 1.0);
+	}
 }

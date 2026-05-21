@@ -137,10 +137,12 @@ public:
 
 	void Render()
 	{
+		glDisable(GL_CULL_FACE);
 		for (auto& piece : m_pieces) {
 			if (!piece) continue;
 			piece->Render();
 		}
+		glEnable(GL_CULL_FACE);
 	}
 
 private:
@@ -222,39 +224,47 @@ private:
 	void StartRotate(const glm::vec2& moveDelta)
 	{
 		if (m_interact.target == nullptr) return;
-		AABB bbox = m_interact.target->GetBoundingBox();
+
 		const float limit = HS * MUL + HS;
-		glm::bvec3 minEdge = glm::epsilonEqual(glm::abs(bbox.min), glm::vec3(limit), 0.001f);
-		glm::bvec3 maxEdge = glm::epsilonEqual(glm::abs(bbox.max), glm::vec3(limit), 0.001f);
 		glm::bvec3 hitEdge = glm::epsilonEqual(glm::abs(m_interact.hitPoint), glm::vec3(limit), 0.001f);
 		if (hitEdge.x && hitEdge.y || hitEdge.x && hitEdge.z || hitEdge.y && hitEdge.z) {
 			SDL_Log("Hitted to edge ignore");
 			return;
 		}
-		std::vector<ESideFlags> oppositeSides;
-		std::array<bool, 6> boxHitEdges = { minEdge.x, minEdge.y, minEdge.z, maxEdge.x, maxEdge.y, maxEdge.z };
-		std::array<ESideFlags, 3> negative = { ESideFlags::L, ESideFlags::D, ESideFlags::B };
-		std::array<ESideFlags, 3> positive = { ESideFlags::R, ESideFlags::U, ESideFlags::F };
-		for (int i = 0; i < boxHitEdges.size(); i++) {
-			const glm::vec3& v = i < 3 ? bbox.min : bbox.max;
-			if (boxHitEdges[i] && ((hitEdge.x && (i % 3 != 0)) || (hitEdge.y && (i % 3 != 1)) || (hitEdge.z && (i % 3 != 2)))) {
-				oppositeSides.push_back(v[i % 3] < 0.f ? negative[i % 3] : positive[i % 3]);
-			}
-		}
 		glm::vec2 cursorPoint = m_interact.mouseHit - moveDelta;
 		Ray ray = Raycast::Get().MakeCameraRay(cursorPoint.x, cursorPoint.y);
+		glm::vec3 hitSigns = glm::sign(m_interact.hitPoint);
 		glm::vec3 hitNormal{};
-		hitNormal.x = hitEdge.x ? glm::sign(m_interact.hitPoint.x) : 0.f;
-		hitNormal.y = hitEdge.y ? glm::sign(m_interact.hitPoint.y) : 0.f;
-		hitNormal.z = hitEdge.z ? glm::sign(m_interact.hitPoint.z) : 0.f;
+		hitNormal.x = hitEdge.x ? hitSigns.x : 0.f;
+		hitNormal.y = hitEdge.y ? hitSigns.y : 0.f;
+		hitNormal.z = hitEdge.z ? hitSigns.z : 0.f;
 		if (auto dist = ray.IntersectPlane(m_interact.hitPoint, hitNormal)) {
 			glm::vec3 currentPoint = ray.origin + ray.direction * (*dist);
-			SDL_Log("Hit: %s | Cursor: %s", VecToString(m_interact.hitPoint).c_str(), VecToString(currentPoint).c_str());
-			if (oppositeSides.size() > 1) {
-
+			glm::vec3 deltaDistance = currentPoint - m_interact.hitPoint;
+			glm::bvec3 sectors = glm::greaterThan(glm::abs(m_interact.hitPoint), glm::vec3(HS));
+			glm::bvec3 centerAxis = glm::lessThan(glm::abs(m_interact.hitPoint), glm::vec3(HS));
+			float dir = glm::dot(glm::normalize(deltaDistance), glm::normalize(glm::cross(hitNormal, glm::vec3(centerAxis))));
+			ESideFlags side = ESideFlags::FB | ESideFlags::LR | ESideFlags::UD;
+			side &= ~(hitEdge.x ? ESideFlags::LR : (hitEdge.y ? ESideFlags::UD : ESideFlags::FB));
+			if (sectors.x) side &= ~(hitSigns.x < 0.f ? ESideFlags::R : ESideFlags::L);
+			if (sectors.y) side &= ~(hitSigns.y < 0.f ? ESideFlags::U : ESideFlags::D);
+			if (sectors.z) side &= ~(hitSigns.z < 0.f ? ESideFlags::F : ESideFlags::B);
+			glm::vec3 absDD = glm::abs(deltaDistance);
+			int nIndex = glm::epsilonNotEqual(hitNormal.x, 0.f, 0.001f) ? 0 : (glm::epsilonNotEqual(hitNormal.y, 0.f, 0.001f) ? 1 : 2);
+			if (glm::any(centerAxis)) {
+				side &= ~(centerAxis.x ? ESideFlags::LR : (centerAxis.y ? ESideFlags::UD : ESideFlags::FB));
+				if (glm::abs(dir) < 0.9f) {
+					int aIndex = (absDD.x > absDD.y && absDD.x > absDD.z) ? 0 : (absDD.y > absDD.z ? 1 : 2);
+					float angleSign = (aIndex == 1 && glm::epsilonNotEqual(hitNormal.z, 0.f, 0.001f)) ? -1.f : 1.f;
+					angleSign *= deltaDistance[aIndex] > 0.f ? 1.f : -1.f;
+					angleSign *= hitNormal[nIndex] < 0.f && nIndex != 0 ? -1.f : (nIndex == 0 && hitNormal[nIndex] > 0.f ? -1.f : 1.f);
+					g_rotateDeg = 90.f * angleSign;
+					m_sideAnimation = true;
+					StartRotateAnimation(m_sides[side]);
+				}
 			}
-			else if (oppositeSides.size() > 0) {
-
+			else {
+				
 			}
 		}
 	}

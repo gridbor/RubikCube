@@ -10,14 +10,30 @@
 
 enum class ESideFlags : unsigned char {
 	None = 0,
-	F = 1 << 1,
-	B = 1 << 2,
-	L = 1 << 3,
-	R = 1 << 4,
-	U = 1 << 5,
-	D = 1 << 6
+	F = 1 << 0,
+	B = 1 << 1,
+	L = 1 << 2,
+	R = 1 << 3,
+	U = 1 << 4,
+	D = 1 << 5,
+
+	FB = F | B,
+	LR = L | R,
+	UD = U | D
 };
 BITMASK_ENUM(ESideFlags)
+
+static inline std::string FlagsToString(const ESideFlags& flags)
+{
+	std::string result = "";
+	if (BitmaskHasFlag(flags, ESideFlags::F)) result += "F";
+	if (BitmaskHasFlag(flags, ESideFlags::B)) result += (result.empty() ? "B" : ", B");
+	if (BitmaskHasFlag(flags, ESideFlags::L)) result += (result.empty() ? "L" : ", L");
+	if (BitmaskHasFlag(flags, ESideFlags::R)) result += (result.empty() ? "R" : ", R");
+	if (BitmaskHasFlag(flags, ESideFlags::U)) result += (result.empty() ? "U" : ", U");
+	if (BitmaskHasFlag(flags, ESideFlags::D)) result += (result.empty() ? "D" : ", D");
+	return result;
+}
 
 
 class Piece : public Renderable, public Transform, public Animation, public Collision {
@@ -25,7 +41,7 @@ public:
 	Piece(Transform* parent, ESideFlags flags) : m_parent{ parent }, m_sideFlags { flags }
 	{
 		std::array<glm::vec3, 3> offset{};
-		if ((flags & ESideFlags::F) != ESideFlags::None) {
+		if (BitmaskHasFlag(flags, ESideFlags::F)) {
 			CreateQuad({
 				glm::vec3(-HS, -HS,  HS),
 				glm::vec3(-HS,  HS,  HS),
@@ -34,7 +50,7 @@ public:
 				}, FRONT_COLOR);
 			offset[0] = glm::vec3(0.f, 0.f, HS * MUL);
 		}
-		else if ((flags & ESideFlags::B) != ESideFlags::None) {
+		else if (BitmaskHasFlag(flags, ESideFlags::B)) {
 			CreateQuad({
 				glm::vec3( HS, -HS, -HS),
 				glm::vec3( HS,  HS, -HS),
@@ -44,7 +60,7 @@ public:
 			offset[0] = glm::vec3(0.f, 0.f, -HS * MUL);
 		}
 
-		if ((flags & ESideFlags::L) != ESideFlags::None) {
+		if (BitmaskHasFlag(flags, ESideFlags::L)) {
 			CreateQuad({
 				glm::vec3(-HS, -HS, -HS),
 				glm::vec3(-HS,  HS, -HS),
@@ -53,7 +69,7 @@ public:
 				}, LEFT_COLOR);
 			offset[1] = glm::vec3(-HS * MUL, 0.f, 0.f);
 		}
-		else if ((flags & ESideFlags::R) != ESideFlags::None) {
+		else if (BitmaskHasFlag(flags, ESideFlags::R)) {
 			CreateQuad({
 				glm::vec3( HS, -HS,  HS),
 				glm::vec3( HS,  HS,  HS),
@@ -63,7 +79,7 @@ public:
 			offset[1] = glm::vec3(HS * MUL, 0.f, 0.f);
 		}
 
-		if ((flags & ESideFlags::U) != ESideFlags::None) {
+		if (BitmaskHasFlag(flags, ESideFlags::U)) {
 			CreateQuad({
 				glm::vec3(-HS,  HS,  HS),
 				glm::vec3(-HS,  HS, -HS),
@@ -72,7 +88,7 @@ public:
 				}, TOP_COLOR);
 			offset[2] = glm::vec3(0.f, HS * MUL, 0.f);
 		}
-		else if ((flags & ESideFlags::D) != ESideFlags::None) {
+		else if (BitmaskHasFlag(flags, ESideFlags::D)) {
 			CreateQuad({
 				glm::vec3(-HS, -HS, -HS),
 				glm::vec3(-HS, -HS,  HS),
@@ -103,12 +119,6 @@ public:
 		SetAttribute(0, 3, offsetof(Vertex, position));
 		SetAttribute(1, 3, offsetof(Vertex, color));
 		SetAttribute(2, 2, offsetof(Vertex, uv));
-
-		if ((m_sideFlags & ESideFlags::L) != ESideFlags::None && (m_sideFlags & ESideFlags::U) != ESideFlags::None && (m_sideFlags & ESideFlags::F) != ESideFlags::None) {
-			GUI::Get().AddGuiFunction("PieceNearestCorner", [=]() {
-				ImGui::Text("Bounds:\n    min = (%f, %f, %f)\n    max = (%f, %f, %f)", m_bounds.min.x, m_bounds.min.y, m_bounds.min.z, m_bounds.max.x, m_bounds.max.y, m_bounds.max.z);
-			});
-		}
 	}
 
 	void SetAnimationSide(Piece* sideParent)
@@ -165,12 +175,12 @@ public:
 
 	bool IsCenter() const
 	{
-		if ((m_sideFlags & ~ESideFlags::F) == ESideFlags::None
-			|| (m_sideFlags & ~ESideFlags::B) == ESideFlags::None
-			|| (m_sideFlags & ~ESideFlags::L) == ESideFlags::None
-			|| (m_sideFlags & ~ESideFlags::R) == ESideFlags::None
-			|| (m_sideFlags & ~ESideFlags::U) == ESideFlags::None
-			|| (m_sideFlags & ~ESideFlags::D) == ESideFlags::None) {
+		if (BitmaskOnlyFlag(m_sideFlags, ESideFlags::F)
+			|| BitmaskOnlyFlag(m_sideFlags, ESideFlags::B)
+			|| BitmaskOnlyFlag(m_sideFlags, ESideFlags::L)
+			|| BitmaskOnlyFlag(m_sideFlags, ESideFlags::R)
+			|| BitmaskOnlyFlag(m_sideFlags, ESideFlags::U)
+			|| BitmaskOnlyFlag(m_sideFlags, ESideFlags::D)) {
 			return true;
 		}
 		return false;
@@ -209,6 +219,7 @@ private:
 	}
 
 private:
+	// SideFlags using only on constructor!
 	ESideFlags m_sideFlags = ESideFlags::None;
 	std::vector<Vertex> m_vertices;
 	std::vector<uint16_t> m_indices;
