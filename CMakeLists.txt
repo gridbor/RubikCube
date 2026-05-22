@@ -10,6 +10,8 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
 
 option(FORMYSYSTEM "Loads libs from my system" OFF)
 
+find_package(OpenGL REQUIRED)
+
 if (FORMYSYSTEM)
     set(Libs "C:/Projects/ThirdPartyLibs")
 
@@ -34,8 +36,6 @@ else()
 
     set(Libs "libs")
 endif(FORMYSYSTEM)
-
-find_package(OpenGL REQUIRED)
 
 add_library(glad STATIC "${Libs}/glad/src/glad.c")
 target_include_directories(glad PUBLIC "${Libs}/glad/include")
