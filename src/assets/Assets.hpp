@@ -3,6 +3,7 @@
 #include <vector>
 #include <string_view>
 #include <fstream>
+#include <cstring>
 #include <SDL3/SDL.h>
 
 

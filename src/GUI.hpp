@@ -15,7 +15,7 @@ public:
 		ImGui::CreateContext();
 
 		ImGui_ImplSDL3_InitForOpenGL(window, glContext);
-		ImGui_ImplOpenGL3_Init("#version 460 core");
+		ImGui_ImplOpenGL3_Init("#version 420 core");
 	}
 
 	~GUI()

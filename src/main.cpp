@@ -10,12 +10,16 @@
 
 int main()
 {
+    std::cout << "Entry main.cpp" << std::endl;
+
 	if (!SDL_Init(SDL_INIT_VIDEO)) {
 		return 1;
 	}
 
+    std::cout << "SDL inited successfully" << std::endl;
+
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 
@@ -23,18 +27,24 @@ int main()
 	int height = 600;
 	SDL_Window* window = SDL_CreateWindow("Rubik's Cube", width, height, SDL_WINDOW_OPENGL);
 	if (window == nullptr) {
-		SDL_Quit();
+        std::cout << "Window create failed!" << std::endl;
+		SDL_Log("Window create failed! %s", SDL_GetError());
+        SDL_Quit();
 		return 2;
 	}
 
 	SDL_GLContext context = SDL_GL_CreateContext(window);
 	if (!context) {
+        std::cout << "OpenGL Context create failed!" << std::endl;
+        SDL_Log("OpenGL context creating failed! %s", SDL_GetError());
 		SDL_DestroyWindow(window);
 		SDL_Quit();
 		return 3;
 	}
 
 	if (!SDL_GL_MakeCurrent(window, context)) {
+        std::cout << "Make current OpenGL context failed!" << std::endl;
+        SDL_Log("OpenGL Make current context failed! %s", SDL_GetError());
 		SDL_GL_DestroyContext(context);
 		SDL_DestroyWindow(window);
 		SDL_Quit();

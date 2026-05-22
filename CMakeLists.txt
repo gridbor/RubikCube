@@ -5,8 +5,14 @@ project(${ProjectName} LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
+
+if(GENERATOR_IS_MULTI_CONFIG)
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
+else()
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
+endif()
 
 option(FORMYSYSTEM "Loads libs from my system" OFF)
 
@@ -55,7 +61,7 @@ target_link_libraries(imgui PRIVATE SDL3::SDL3)
 file(GLOB_RECURSE sources LIST_DIRECTORIES FALSE RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} CONFIGURE_DEPENDS src/*.c* src/*.h*)
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${sources})
 
-add_executable(${ProjectName} ${sources} ${IMGUI_SOURCES} ${IMGUI_BACKENDS} ${GLAD_SOURCES})
+add_executable(${ProjectName} ${sources}) 
 
 target_link_libraries(${ProjectName} PRIVATE SDL3::SDL3 SDL3_ttf::SDL3_ttf glm::glm OpenGL::GL glad imgui)
 target_include_directories(${ProjectName} PRIVATE src ${OPENGL_INCLUDE_DIR})
@@ -63,9 +69,11 @@ target_compile_options(${ProjectName} PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/MP>)
 
 set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT ${ProjectName})
 
-add_custom_command(TARGET ${ProjectName} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    $<TARGET_RUNTIME_DLLS:${ProjectName}>
-    $<TARGET_FILE_DIR:${ProjectName}>
-    COMMAND_EXPAND_LISTS
-)
+if(WIN32)
+    add_custom_command(TARGET ${ProjectName} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        $<TARGET_RUNTIME_DLLS:${ProjectName}>
+        $<TARGET_FILE_DIR:${ProjectName}>
+        COMMAND_EXPAND_LISTS
+    )
+endif()

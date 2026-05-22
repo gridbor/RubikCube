@@ -1,6 +1,7 @@
 #pragma once
 #include <string_view>
 #include <unordered_map>
+#include <cstring>
 #include <glad/glad.h>
 
 #include "assets/Assets.hpp"
