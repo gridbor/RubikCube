@@ -63,7 +63,7 @@ void Game::EventProcess(const SDL_Event& event)
 	}
 	else if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
 		if (event.button.button == SDL_BUTTON_RIGHT) {
-			//m_camera->TargetAiming();
+			m_camera->TargetAiming();
 		}
 	}
 }
